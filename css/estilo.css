@@ -1,0 +1,128 @@
+*{/* selector universal */
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    box-sizing: border-box;
+    font-family: 'Oxygen', sans-serif;
+}
+
+:root {
+    --theme-color: white;
+    --primary-color: #124f88;
+    --secundary-color: #F7C331;
+    --text-color-inverse: white;
+    --text-color: black;
+    --navbar-shallow-color: #e5e5e5;
+    --menu-mobile-background-color: #3A4460;
+  }
+
+html{
+    height: 100%;
+}
+body{
+    background-color: var(--theme-color);
+    
+}
+grid-container{
+    display: grid;
+    width: 90%;
+	margin: 20px auto;
+    grid-template-columns: 1fr;
+	grid-template-rows: 1fr,1fr,auto, auto, 1fr;
+    grid-template-areas: 
+        "header"
+        "principal"
+        "consultas"
+        "ubicacion"
+        "footer";
+    gap: 10px;
+
+}
+.principal{
+    height: 500px;    
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    padding: 100px;
+    grid-area: principal;
+}
+.principal h1{    
+    color: blue;    
+}
+.ubicacion{
+    grid-area: ubicacion;
+    
+}
+.consultas{
+    grid-area: consulta;
+    background-position: center;
+    overflow-y: auto;
+
+}
+.consultas h1{ 
+    color: blue;
+}
+.consultas Nombre{
+    color: black;
+    display: inline-block   
+}
+/* pie de pagina */
+footer{
+    grid-row:3/4;
+    grid-column:1/5;
+   }
+   
+   .piePagina {
+       display: flex;
+       flex-direction: column;
+       background-color: black;
+   }
+   
+   .piePagina__mapaDelSitio {
+       display: flex;
+       color: white;
+       padding: 10px;
+       justify-content: center;
+   }
+   
+   .piePagina__contenedorFooter{
+       display: flex;
+       justify-content: space-around;
+       align-items: center;
+   }
+   
+   .piePagina__contenedorFooter--menu ul li a {
+       text-decoration: none;
+       color: white;
+       line-height: 4px;
+   }
+   
+   .piePagina__contenedorFooter--menu ul li a:hover {
+       text-decoration: none;
+       color: orangered;
+   }
+   
+   .piePagina__contenedorRedes--linkRedes{
+       border-radius: 100%;
+   }
+   
+   .piePagina__contenedorRedes--linkRedes .redes {
+       background: white;
+       border-radius: 100%;
+       border: black 1px solid;
+       height: 35px;
+       width: auto;
+       margin: 0 15px;
+       padding: 0;
+       opacity: 0.5;
+   }
+   
+   a .redes:hover {
+       opacity: 1;
+   }
+   
+   .piePagina__copy {
+       color: white;
+       text-align: center;
+       margin: 10px 0;
+   }

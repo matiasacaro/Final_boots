@@ -7,8 +7,8 @@
 }
 
 :root {
-    --theme-color: white;
-    --primary-color: #124f88;
+    --theme-color: rgb(194, 200, 226);
+    --primary-color: #61a5e5;
     --secundary-color: #F7C331;
     --text-color-inverse: white;
     --text-color: black;
@@ -21,50 +21,68 @@ html{
 }
 body{
     background-color: var(--theme-color);
+    font-family: 'Rubik', sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.9;
     
 }
-grid-container{
-    display: grid;
-    width: 90%;
-	margin: 20px auto;
-    grid-template-columns: 1fr;
-	grid-template-rows: 1fr,1fr,auto, auto, 1fr;
-    grid-template-areas: 
-        "header"
-        "principal"
-        "consultas"
-        "ubicacion"
-        "footer";
-    gap: 10px;
+.c1{
+    width: 100%;
+}
+.titulo_parrafos{
+    font-family: 'Rubik', sans-serif;
+    font-size: 25px;
+    justify-content: center;
+    color: rgb(124, 109, 188);
+}
+.estilo_cuerpo{
+    color: rgb(124, 109, 188);
+    font-family: 'Rubik', sans-serif;
+    font-weight: bold;
+    text-align: center;
+    margin: top 50px;
 
 }
-.principal{
-    height: 500px;    
-    background-position: center;
-    background-size: cover;
-    background-repeat: no-repeat;
-    padding: 100px;
-    grid-area: principal;
+.sec_soluciones{
+    padding: 60px ;
 }
-.principal h1{    
-    color: blue;    
+.dis_parrafo{
+    font-family: 'Rubik', sans-serif;
+    font-size: 20px;
+    justify-content: center;
+    color: rgb(124, 109, 188);
+    line-height: 130%
 }
-.ubicacion{
-    grid-area: ubicacion;
+header{
+    justify-content: right;
+}
+.estilo_titulos{
+    color: rgb(124, 109, 188);
+    font-family: 'Rubik', sans-serif;
+    font-size: 50px;
+    justify-content: center;
     
 }
-.consultas{
-    grid-area: consulta;
-    background-position: center;
-    overflow-y: auto;
-
+.boton_formulario{
+    background-color: rgb(124, 109, 188);
 }
-.consultas h1{ 
-    color: blue;
+.contenedor-icono svg{
+    width: 30px;
+    height: 40px;
 }
-.consultas Nombre{
-    color: black;
-    display: inline-block   
+.card_estilo{
+   color: rgb(124, 109, 188);
+   font-family: 'Rubik', sans-serif;
+   font-size: 20px; 
+}
+.card_estilo_parrafo{
+    color: rgb(124, 109, 188);
+    font-family: 'Rubik', sans-serif;
+    font-size: 15px; 
+ }
+.estilo-formulario{
+  color: rgb(124, 109, 188);  
 }
 /* pie de pagina */
 footer{
@@ -80,7 +98,7 @@ footer{
    
    .piePagina__mapaDelSitio {
        display: flex;
-       color: white;
+       color: rgb(124, 109, 188);
        padding: 10px;
        justify-content: center;
    }
@@ -93,13 +111,13 @@ footer{
    
    .piePagina__contenedorFooter--menu ul li a {
        text-decoration: none;
-       color: white;
+       color: rgb(124, 109, 188);
        line-height: 4px;
    }
    
    .piePagina__contenedorFooter--menu ul li a:hover {
        text-decoration: none;
-       color: orangered;
+       color: rgb(116, 71, 240);
    }
    
    .piePagina__contenedorRedes--linkRedes{
@@ -122,7 +140,7 @@ footer{
    }
    
    .piePagina__copy {
-       color: white;
+       color: rgb(124, 109, 188);
        text-align: center;
        margin: 10px 0;
    }

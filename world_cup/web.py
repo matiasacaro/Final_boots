@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Copa del Mundo 2026 — Dashboard Web.
-Accesible desde el dominio configurado en Cloudflare Tunnel.
+Diseño estilo promiedos.com: fila compacta con status, equipos, marcador y goleadores.
 """
 
 import json
@@ -26,7 +26,26 @@ TZ_ARG = timezone(timedelta(hours=-3))
 app = Flask(__name__)
 
 _cache = {"matches": None, "ts": 0}
-CACHE_TTL = 30  # segundos
+CACHE_TTL = 30
+
+# Banderas por TLA (código de 3 letras de football-data.org)
+TLA_FLAG = {
+    "ARG": "🇦🇷", "BRA": "🇧🇷", "FRA": "🇫🇷", "GER": "🇩🇪", "ESP": "🇪🇸",
+    "ENG": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "POR": "🇵🇹", "NED": "🇳🇱", "URU": "🇺🇾", "MEX": "🇲🇽",
+    "USA": "🇺🇸", "CAN": "🇨🇦", "JPN": "🇯🇵", "KOR": "🇰🇷", "MAR": "🇲🇦",
+    "SEN": "🇸🇳", "NGA": "🇳🇬", "GHA": "🇬🇭", "CMR": "🇨🇲", "ECU": "🇪🇨",
+    "COL": "🇨🇴", "CHI": "🇨🇱", "PER": "🇵🇪", "VEN": "🇻🇪", "BOL": "🇧🇴",
+    "PAR": "🇵🇾", "PAN": "🇵🇦", "CRC": "🇨🇷", "HON": "🇭🇳", "JAM": "🇯🇲",
+    "KSA": "🇸🇦", "IRN": "🇮🇷", "IRQ": "🇮🇶", "AUS": "🇦🇺", "NZL": "🇳🇿",
+    "SUI": "🇨🇭", "BEL": "🇧🇪", "CRO": "🇭🇷", "DEN": "🇩🇰", "POL": "🇵🇱",
+    "SRB": "🇷🇸", "UKR": "🇺🇦", "AUT": "🇦🇹", "TUR": "🇹🇷", "CZE": "🇨🇿",
+    "SVK": "🇸🇰", "HUN": "🇭🇺", "ROU": "🇷🇴", "SCO": "🏴󠁧󠁢󠁳󠁣󠁴󠁿", "WAL": "🏴󠁧󠁢󠁷󠁬󠁳󠁿",
+    "ALB": "🇦🇱", "SVN": "🇸🇮", "QAT": "🇶🇦", "CIV": "🇨🇮", "EGY": "🇪🇬",
+    "TUN": "🇹🇳", "ALG": "🇩🇿", "HAI": "🇭🇹", "IDN": "🇮🇩", "UZB": "🇺🇿",
+    "CHN": "🇨🇳", "MLI": "🇲🇱", "CPV": "🇨🇻", "COD": "🇨🇩", "SLV": "🇸🇻",
+    "GUA": "🇬🇹", "TRI": "🇹🇹", "NOR": "🇳🇴", "ITA": "🇮🇹", "SWE": "🇸🇪",
+    "GRE": "🇬🇷", "ZAF": "🇿🇦", "TAN": "🇹🇿", "ANG": "🇦🇴", "NOR": "🇳🇴",
+}
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -49,20 +68,17 @@ def bot_is_running():
         )
         return r.stdout.strip() == "active"
     except Exception:
-        return None  # No se puede determinar
+        return None
 
 
 def fetch_matches():
     now = time.time()
     if _cache["matches"] is not None and now - _cache["ts"] < CACHE_TTL:
         return _cache["matches"]
-
     try:
         config = load_config()
-        api_key = config.get("api_key", "")
-        headers = {"X-Auth-Token": api_key}
+        headers = {"X-Auth-Token": config.get("api_key", "")}
         today = datetime.now(TZ_ARG).strftime("%Y-%m-%d")
-
         r = requests.get(
             f"{FOOTBALL_API}/competitions/{COMPETITION}/matches",
             headers=headers,
@@ -74,30 +90,23 @@ def fetch_matches():
             _cache["ts"] = now
         else:
             log.warning("API %s: %s", r.status_code, r.text[:100])
-
     except Exception as e:
         log.error("fetch_matches: %s", e)
-
     return _cache["matches"] or []
 
 
 def compute_score(match):
     home_id = match["homeTeam"]["id"]
-    goals = match.get("goals") or []
     hg, ag = 0, 0
-    for g in goals:
+    for g in (match.get("goals") or []):
         tid = (g.get("team") or {}).get("id")
         gtype = g.get("type", "REGULAR")
         if gtype == "OWN":
-            if tid == home_id:
-                ag += 1
-            else:
-                hg += 1
+            if tid == home_id: ag += 1
+            else: hg += 1
         else:
-            if tid == home_id:
-                hg += 1
-            else:
-                ag += 1
+            if tid == home_id: hg += 1
+            else: ag += 1
     return hg, ag
 
 
@@ -122,22 +131,25 @@ def match_to_dict(m):
         tid = (g.get("team") or {}).get("id")
         suffix = " (AG)" if gtype == "OWN" else (" (P)" if gtype == "PENALTY" else "")
         entry = {"name": f"{name}{suffix}", "minute": minute}
-        # Own goal: beneficia al equipo contrario
-        is_for_home = (tid == home_id and gtype != "OWN") or (tid != home_id and gtype == "OWN")
-        (scorers_home if is_for_home else scorers_away).append(entry)
+        is_home = (tid == home_id and gtype != "OWN") or (tid != home_id and gtype == "OWN")
+        (scorers_home if is_home else scorers_away).append(entry)
+
+    home_tla = m["homeTeam"].get("tla", "")
+    away_tla = m["awayTeam"].get("tla", "")
 
     return {
         "id": m["id"],
         "home": m["homeTeam"].get("shortName") or m["homeTeam"]["name"],
         "away": m["awayTeam"].get("shortName") or m["awayTeam"]["name"],
+        "home_flag": TLA_FLAG.get(home_tla, ""),
+        "away_flag": TLA_FLAG.get(away_tla, ""),
         "hg": hg,
         "ag": ag,
         "status": m["status"],
         "kickoff": fmt_kickoff(m["utcDate"]),
         "scorers_home": scorers_home,
         "scorers_away": scorers_away,
-        "stage": m.get("stage", ""),
-        "group": m.get("group", ""),
+        "group": m.get("group") or "",
     }
 
 
@@ -148,217 +160,274 @@ PAGE = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Copa del Mundo 2026</title>
+<title>Mundial 2026</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#eef0f3;color:#1a1a2e;min-height:100vh}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#eaece8;color:#111}
 
-header{background:#002f6c;color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between}
-header h1{font-size:1.05rem;font-weight:700;letter-spacing:.3px}
-header .sub{font-size:.72rem;opacity:.65;margin-top:2px}
-.header-right{text-align:right}
-#update-badge{font-size:.68rem;background:rgba(255,255,255,.15);padding:3px 8px;border-radius:20px}
+header{background:#1a5c2a;padding:12px 14px;display:flex;align-items:center;justify-content:space-between}
+.logo{color:#fff;font-size:1rem;font-weight:900;text-transform:uppercase;letter-spacing:.5px}
+.logo em{color:#7df59a;font-style:normal}
+.hdr-right{display:flex;align-items:center;gap:12px}
+#upd{font-size:.67rem;color:rgba(255,255,255,.6)}
+.cfg-link{color:rgba(255,255,255,.8);text-decoration:none;font-size:.88rem}
 
-nav{background:#00235a;display:flex;padding:0 16px}
-nav a{color:#99b8e0;text-decoration:none;padding:10px 14px;font-size:.82rem;border-bottom:3px solid transparent;display:inline-block}
-nav a.active,nav a:hover{color:#fff;border-bottom-color:#FFD600}
+.date-bar{background:#fff;display:flex;align-items:center;justify-content:center;padding:9px 14px;border-bottom:1px solid #e0e0e0}
+.date-lbl{font-size:.88rem;font-weight:700;color:#333}
 
-main{max-width:700px;margin:18px auto;padding:0 12px 40px}
+.tabs{background:#fff;display:flex;padding:0 12px;border-bottom:2px solid #e5e5e5}
+.tab{padding:9px 14px;font-size:.8rem;font-weight:700;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;cursor:pointer;user-select:none}
+.tab.on{color:#1a5c2a;border-bottom-color:#1a5c2a}
+.tab .cnt{background:#c00;color:#fff;border-radius:20px;padding:0 5px;font-size:.65rem;margin-left:3px;vertical-align:middle}
+.tabs-spacer{flex:1}
 
-.section-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:#556;padding:14px 0 7px;display:flex;align-items:center;gap:6px}
-.dot{width:8px;height:8px;background:#c00;border-radius:50%;animation:pulse 1.2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+main{padding:10px 0 50px}
 
-.card{background:#fff;border-radius:9px;margin-bottom:7px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.09)}
-.card.live{border-left:4px solid #c00}
-.card.finished{opacity:.8}
+/* Bloque de competencia */
+.bloque{background:#fff;margin:10px 10px;border-radius:9px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.11)}
+.bloque-hdr{background:#1a5c2a;color:#fff;padding:9px 14px;font-size:.82rem;font-weight:700;display:flex;align-items:center;gap:7px}
 
-.card-body{padding:13px 16px}
-.match-row{display:flex;align-items:center;gap:8px}
-.team{flex:1;font-size:.92rem;font-weight:600;line-height:1.2}
-.team.right{text-align:right}
-.score-box{text-align:center;min-width:76px}
-.score{font-size:1.45rem;font-weight:800;letter-spacing:3px;color:#002f6c}
-.status-lbl{font-size:.65rem;font-weight:700;margin-top:1px;text-transform:uppercase;letter-spacing:.5px}
-.status-lbl.live{color:#c00}
-.status-lbl.ft{color:#2d7a2d}
-.status-lbl.sched{color:#555;font-size:.78rem;font-weight:700}
+/* Fila de partido */
+.partido{border-bottom:1px solid #f0f0f0}
+.partido:last-child{border-bottom:none}
+.fila{display:flex;align-items:center;padding:9px 10px;gap:6px}
 
-.scorers{display:flex;justify-content:space-between;margin-top:9px;padding-top:8px;border-top:1px solid #f0f0f0}
-.sc-col{flex:1;font-size:.7rem;color:#555;line-height:1.7}
-.sc-col.right{text-align:right}
-.sc-min{color:#aaa;font-size:.64rem}
+/* Status */
+.st{width:46px;flex-shrink:0;text-align:center;font-size:.7rem;font-weight:700;line-height:1.3;color:#888}
+.st.live{color:#c00}
+.st.ft{color:#555}
+.live-pulse{display:inline-block;width:6px;height:6px;background:#c00;border-radius:50%;animation:p 1.2s infinite;vertical-align:middle;margin-right:2px}
+@keyframes p{0%,100%{opacity:1}50%{opacity:.2}}
 
-.empty{text-align:center;color:#888;padding:40px 20px;font-size:.88rem}
+/* Equipos */
+.local{flex:1;display:flex;align-items:center;justify-content:flex-end;gap:5px;overflow:hidden}
+.visita{flex:1;display:flex;align-items:center;gap:5px;overflow:hidden}
+.tnombre{font-size:.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bandera{font-size:.85rem;flex-shrink:0;line-height:1}
 
-/* Config page */
-.cfg-card{background:#fff;border-radius:9px;padding:22px;box-shadow:0 1px 4px rgba(0,0,0,.09)}
-.cfg-card h3{color:#002f6c;font-size:.95rem;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #eee}
-.field{margin-bottom:14px}
-.field label{display:block;font-size:.75rem;font-weight:600;color:#445;margin-bottom:4px}
-.field input{width:100%;padding:8px 10px;border:1px solid #dde;border-radius:6px;font-size:.88rem;outline:none}
-.field input:focus{border-color:#002f6c}
-.field .hint{font-size:.68rem;color:#888;margin-top:3px}
-.btn-save{background:#002f6c;color:#fff;border:none;padding:9px 22px;border-radius:6px;font-size:.88rem;cursor:pointer;font-weight:600}
-.btn-save:hover{background:#001a40}
-.toast{padding:9px 14px;border-radius:6px;font-size:.82rem;margin-bottom:14px;background:#d4edda;color:#155724;border:1px solid #c3e6cb}
+/* Marcador */
+.marcador{width:60px;flex-shrink:0;text-align:center}
+.score{font-size:1rem;font-weight:800;color:#111;letter-spacing:1px;white-space:nowrap}
+.hora{font-size:.95rem;font-weight:700;color:#1a5c2a}
+.guion{color:#bbb;font-weight:400}
 
-.bot-status{display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:.82rem}
-.badge{padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700}
-.badge.on{background:#d4edda;color:#155724}
-.badge.off{background:#f8d7da;color:#721c24}
-.badge.unknown{background:#fff3cd;color:#856404}
+/* Goleadores */
+.goles{display:flex;padding:0 10px 7px}
+.goles-gap{width:46px;flex-shrink:0}
+.goles-l{flex:1;text-align:right;font-size:.65rem;color:#777;line-height:1.6;padding-right:3px}
+.goles-m{width:60px;flex-shrink:0}
+.goles-r{flex:1;font-size:.65rem;color:#777;line-height:1.6;padding-left:3px}
+.gol-min{color:#bbb}
 
-footer{text-align:center;font-size:.68rem;color:#aaa;padding:20px}
+.empty-msg{text-align:center;color:#888;padding:35px 20px;font-size:.88rem}
 
-@media(max-width:480px){
-  header h1{font-size:.92rem}
-  nav a{padding:9px 10px;font-size:.78rem}
-  main{padding:0 8px 40px}
-  .card-body{padding:11px 12px}
-  .team{font-size:.82rem}
-  .score{font-size:1.2rem;letter-spacing:2px}
-  .score-box{min-width:64px}
-  .status-lbl{font-size:.6rem}
-  .sc-col{font-size:.65rem}
-  .cfg-card{padding:15px}
+/* Config */
+.cfg-wrap{padding:10px 10px 0}
+.cfg-card{background:#fff;border-radius:9px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,.1);margin-bottom:12px}
+.cfg-card h3{font-size:.88rem;color:#1a5c2a;font-weight:800;margin-bottom:14px;padding-bottom:9px;border-bottom:1px solid #eee;text-transform:uppercase;letter-spacing:.5px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:.73rem;font-weight:700;color:#555;margin-bottom:4px}
+.field input{width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:.87rem;outline:none}
+.field input:focus{border-color:#1a5c2a}
+.hint{font-size:.67rem;color:#999;margin-top:3px}
+.btn{background:#1a5c2a;color:#fff;border:none;padding:11px;border-radius:7px;font-size:.87rem;font-weight:700;cursor:pointer;width:100%}
+.btn:hover{background:#145222}
+.toast{background:#d4edda;color:#155724;border-radius:7px;padding:10px 14px;font-size:.82rem;margin-bottom:12px;border:1px solid #c3e6cb}
+.bdg{display:inline-block;padding:2px 9px;border-radius:20px;font-size:.7rem;font-weight:700}
+.bdg.on{background:#d4edda;color:#155724}
+.bdg.off{background:#f8d7da;color:#721c24}
+.bdg.unk{background:#fff3cd;color:#856404}
+code{background:#f5f5f5;padding:2px 6px;border-radius:4px;font-size:.72rem}
+
+footer{text-align:center;font-size:.67rem;color:#aaa;padding:16px}
+
+@media(max-width:380px){
+  .tnombre{font-size:.75rem}
+  .st{width:40px;font-size:.65rem}
+  .marcador{width:52px}
+  .score{font-size:.9rem}
+  .goles-gap{width:40px}
+  .goles-m{width:52px}
 }
 </style>
 </head>
 <body>
 
 <header>
-  <div>
-    <h1>🏆 Copa del Mundo 2026</h1>
-    <div class="sub">Marcadores en tiempo real</div>
-  </div>
-  <div class="header-right">
-    <span id="update-badge">Actualizando...</span>
+  <div class="logo">⚽ MUNDIAL <em>2026</em></div>
+  <div class="hdr-right">
+    <span id="upd"></span>
+    {% if page == 'home' %}
+      <a class="cfg-link" href="/config">⚙️</a>
+    {% else %}
+      <a class="cfg-link" href="/">← Partidos</a>
+    {% endif %}
   </div>
 </header>
 
-<nav>
-  <a href="/" class="{{ 'active' if page=='home' else '' }}">Partidos</a>
-  <a href="/config" class="{{ 'active' if page=='config' else '' }}">⚙️ Bot</a>
-</nav>
+{% if page == 'home' %}
+<div class="date-bar">
+  <span class="date-lbl" id="date-lbl">HOY</span>
+</div>
+<div class="tabs">
+  <div class="tab on" id="tab-todos" onclick="setTab('todos',this)">TODOS</div>
+  <div class="tab" id="tab-live" onclick="setTab('live',this)">VIVO</div>
+  <div class="tabs-spacer"></div>
+</div>
+{% endif %}
 
 <main>
-
 {% if page == 'home' %}
-  <div id="content">
-    <div class="empty">Cargando partidos...</div>
-  </div>
+  <div id="content"><div class="empty-msg">Cargando...</div></div>
 
 {% elif page == 'config' %}
+<div class="cfg-wrap">
   {% if saved %}
-  <div class="toast">✅ Configuración guardada. Los cambios se aplican en el próximo ciclo del bot.</div>
+  <div class="toast">✅ Guardado. El bot lo aplica en el próximo ciclo.</div>
   {% endif %}
 
   <div class="cfg-card">
-    <h3>Estado del Bot de Alertas</h3>
-    <div class="bot-status">
+    <h3>Estado del Bot</h3>
+    <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:.82rem">
       {% if bot_status == True %}
-        <span class="badge on">● ACTIVO</span> El bot está enviando alertas a Telegram.
+        <span class="bdg on">● ACTIVO</span> Enviando alertas a Telegram.
       {% elif bot_status == False %}
-        <span class="badge off">● INACTIVO</span> El bot no está corriendo.
-        <code style="font-size:.72rem;color:#555">sudo systemctl start wc2026</code>
+        <span class="bdg off">● INACTIVO</span>
+        Inicialo con: <code>sudo systemctl start wc2026</code>
       {% else %}
-        <span class="badge unknown">● DESCONOCIDO</span> Estado del servicio no determinado.
+        <span class="bdg unk">● DESCONOCIDO</span>
       {% endif %}
     </div>
   </div>
-
-  <br>
 
   <div class="cfg-card">
     <h3>⚙️ Configuración de Alertas</h3>
     <form method="POST" action="/config">
       <div class="field">
         <label>Equipos a seguir</label>
-        <input type="text" name="followed_teams" value="{{ config.get('followed_teams', [])|join(',') }}" placeholder="Argentina,Brasil,Francia,España">
-        <p class="hint">Separados por coma. Dejá vacío para recibir alertas de TODOS los partidos.</p>
+        <input type="text" name="followed_teams" value="{{ config.get('followed_teams',[])|join(',') }}" placeholder="Argentina,Brasil,Francia">
+        <p class="hint">Separados por coma. Vacío = TODOS los partidos del Mundial.</p>
       </div>
       <div class="field">
-        <label>Intervalo en vivo (segundos)</label>
-        <input type="number" name="poll_live" value="{{ config.get('poll_interval_seconds', 30) }}" min="30">
-        <p class="hint">Mínimo 30 segundos. Con el plan gratuito de football-data.org se recomienda 30-60s.</p>
+        <label>Intervalo en vivo (segundos, mín 30)</label>
+        <input type="number" name="poll_live" value="{{ config.get('poll_interval_seconds',30) }}" min="30">
       </div>
       <div class="field">
-        <label>Intervalo sin partidos (segundos)</label>
-        <input type="number" name="poll_idle" value="{{ config.get('poll_interval_idle_seconds', 300) }}" min="60">
+        <label>Intervalo sin partidos (segundos, mín 60)</label>
+        <input type="number" name="poll_idle" value="{{ config.get('poll_interval_idle_seconds',300) }}" min="60">
       </div>
-      <button type="submit" class="btn-save">Guardar cambios</button>
+      <button type="submit" class="btn">Guardar cambios</button>
     </form>
   </div>
+</div>
 {% endif %}
-
 </main>
 
-<footer>Copa del Mundo 2026 · Zona horaria Argentina (UTC-3)</footer>
+<footer>Copa del Mundo 2026 · Horarios en Argentina (UTC-3)</footer>
 
 <script>
-var LIVE = ['IN_PLAY','PAUSED','EXTRA_TIME','PENALTY_SHOOTOUT'];
-var STATUS_LBL = {
-  'IN_PLAY':'EN VIVO','PAUSED':'ENTRETIEMPO','EXTRA_TIME':'PRÓRROGA',
-  'PENALTY_SHOOTOUT':'PENALES','FINISHED':'FINAL','SCHEDULED':'','TIMED':''
+var LIVE_ST = ['IN_PLAY','PAUSED','EXTRA_TIME','PENALTY_SHOOTOUT'];
+var mode = 'todos';
+var lastData = [];
+
+var ST = {
+  IN_PLAY: 'EN<br>VIVO', PAUSED: 'ENTRE<br>TIEMPO', EXTRA_TIME: 'PRÓRR.',
+  PENALTY_SHOOTOUT: 'PENAL.', FINISHED: 'Final'
 };
 
-function renderCard(m) {
-  var isLive = LIVE.includes(m.status);
+function setTab(t, el) {
+  mode = t;
+  document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('on'); });
+  el.classList.add('on');
+  renderContent(lastData);
+}
+
+function renderPartido(m) {
+  var isLive = LIVE_ST.includes(m.status);
   var isFt   = m.status === 'FINISHED';
   var isSch  = m.status === 'SCHEDULED' || m.status === 'TIMED';
 
-  var cls = 'card' + (isLive?' live':'') + (isFt?' finished':'');
+  // Status cell
+  var stTxt, stCls = '';
+  if (isLive) {
+    stTxt = '<span class="live-pulse"></span>' + (ST[m.status] || 'VIVO');
+    stCls = 'live';
+  } else if (isFt) {
+    stTxt = 'Final'; stCls = 'ft';
+  } else {
+    stTxt = m.kickoff;
+  }
 
-  var scoreEl = isSch
-    ? '<span class="score" style="font-size:1.1rem;letter-spacing:1px">'+m.kickoff+'</span><div class="status-lbl sched">ARG</div>'
-    : '<span class="score">'+m.hg+'&thinsp;&ndash;&thinsp;'+m.ag+'</span><div class="status-lbl '+(isLive?'live':isFt?'ft':'')+'">'+STATUS_LBL[m.status]+'</div>';
+  // Score / hora cell
+  var marcador;
+  if (isSch) {
+    marcador = '<span class="hora">'+m.kickoff+'</span>';
+  } else {
+    marcador = '<span class="score">'+m.hg+'<span class="guion"> - </span>'+m.ag+'</span>';
+  }
 
-  var scHome = (m.scorers_home||[]).map(function(s){
-    return '<span>⚽ '+s.name+' <span class="sc-min">'+s.minute+"'</span></span>";
-  }).join('');
-  var scAway = (m.scorers_away||[]).map(function(s){
-    return '<span>⚽ '+s.name+' <span class="sc-min">'+s.minute+"'</span></span>";
-  }).join('');
-  var scorersHtml = (scHome||scAway)
-    ? '<div class="scorers"><div class="sc-col">'+scHome+'</div><div class="sc-col right">'+scAway+'</div></div>'
+  var hf = m.home_flag || '', af = m.away_flag || '';
+
+  // Goleadores
+  var gh = (m.scorers_home||[]).map(function(s){
+    return '⚽ '+s.name+' <span class="gol-min">'+s.minute+"'</span>";
+  }).join('<br>');
+  var ga = (m.scorers_away||[]).map(function(s){
+    return '⚽ '+s.name+' <span class="gol-min">'+s.minute+"'</span>";
+  }).join('<br>');
+  var golesHtml = (gh||ga)
+    ? '<div class="goles"><div class="goles-gap"></div><div class="goles-l">'+gh+'</div><div class="goles-m"></div><div class="goles-r">'+ga+'</div></div>'
     : '';
 
-  return '<div class="'+cls+'"><div class="card-body">'
-    +'<div class="match-row">'
-    +'<div class="team">'+m.home+'</div>'
-    +'<div class="score-box">'+scoreEl+'</div>'
-    +'<div class="team right">'+m.away+'</div>'
-    +'</div>'+scorersHtml
-    +'</div></div>';
+  return '<div class="partido">'
+    + '<div class="fila">'
+    +   '<div class="st '+stCls+'">'+stTxt+'</div>'
+    +   '<div class="local"><span class="tnombre">'+m.home+'</span><span class="bandera">'+hf+'</span></div>'
+    +   '<div class="marcador">'+marcador+'</div>'
+    +   '<div class="visita"><span class="bandera">'+af+'</span><span class="tnombre">'+m.away+'</span></div>'
+    + '</div>'
+    + golesHtml
+    + '</div>';
 }
 
-function renderAll(matches) {
-  var live  = matches.filter(function(m){ return LIVE.includes(m.status); });
-  var rest  = matches.filter(function(m){ return !LIVE.includes(m.status); });
-  var html  = '';
+function renderContent(matches) {
+  var live = matches.filter(function(m){ return LIVE_ST.includes(m.status); });
+  var vis  = mode === 'live' ? live : matches;
 
-  if (live.length) {
-    html += '<div class="section-label"><span class="dot"></span> EN VIVO</div>';
-    html += live.map(renderCard).join('');
+  // Actualizar badge de la pestaña VIVO
+  var tl = document.getElementById('tab-live');
+  if (tl) tl.innerHTML = live.length
+    ? 'VIVO <span class="cnt">'+live.length+'</span>'
+    : 'VIVO';
+
+  var c = document.getElementById('content');
+  if (!c) return;
+
+  if (!vis.length) {
+    c.innerHTML = '<div class="empty-msg">'+(mode==='live'?'No hay partidos en vivo ahora.':'No hay partidos programados para hoy.')+'</div>';
+    return;
   }
-  if (rest.length) {
-    var d = new Date();
-    var label = d.getDate()+'/'+(d.getMonth()+1);
-    html += '<div class="section-label">📅 HOY — '+label+'</div>';
-    html += rest.map(renderCard).join('');
-  }
-  if (!matches.length) html = '<div class="empty">No hay partidos programados para hoy.</div>';
-  return html;
+
+  c.innerHTML = '<div class="bloque">'
+    + '<div class="bloque-hdr">🏆 COPA DEL MUNDO 2026</div>'
+    + vis.map(renderPartido).join('')
+    + '</div>';
 }
 
 function refresh() {
   fetch('/api/matches')
     .then(function(r){ return r.json(); })
     .then(function(data){
-      document.getElementById('content').innerHTML = renderAll(data.matches);
+      lastData = data.matches;
+      renderContent(lastData);
       var t = new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
-      document.getElementById('update-badge').textContent = 'Actualizado '+t;
+      var u = document.getElementById('upd');
+      if (u) u.textContent = t;
+      var dl = document.getElementById('date-lbl');
+      if (dl) {
+        var d = new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+        dl.textContent = d.charAt(0).toUpperCase()+d.slice(1);
+      }
     })
     .catch(function(e){ console.error(e); });
 }
@@ -389,7 +458,6 @@ def api_matches():
 def config_page():
     saved = False
     config = load_config()
-
     if request.method == "POST":
         raw = request.form.get("followed_teams", "")
         config["followed_teams"] = [t.strip() for t in raw.split(",") if t.strip()]
@@ -397,13 +465,8 @@ def config_page():
         config["poll_interval_idle_seconds"] = max(60, int(request.form.get("poll_idle", 300)))
         save_config(config)
         saved = True
-
     return render_template_string(
-        PAGE,
-        page="config",
-        config=config,
-        saved=saved,
-        bot_status=bot_is_running(),
+        PAGE, page="config", config=config, saved=saved, bot_status=bot_is_running()
     )
 
 

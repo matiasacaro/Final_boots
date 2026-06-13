@@ -163,21 +163,21 @@ PAGE = r"""<!DOCTYPE html>
 <title>Mundial 2026</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#eaece8;color:#111}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#deeaf6;color:#111}
 
-header{background:#1a5c2a;padding:12px 14px;display:flex;align-items:center;justify-content:space-between}
+header{background:#4a8fc7;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #FFD700}
 .logo{color:#fff;font-size:1rem;font-weight:900;text-transform:uppercase;letter-spacing:.5px}
-.logo em{color:#7df59a;font-style:normal}
+.logo em{color:#FFD700;font-style:normal}
 .hdr-right{display:flex;align-items:center;gap:12px}
-#upd{font-size:.67rem;color:rgba(255,255,255,.6)}
-.cfg-link{color:rgba(255,255,255,.8);text-decoration:none;font-size:.88rem}
+#upd{font-size:.67rem;color:rgba(255,255,255,.7)}
+.cfg-link{color:rgba(255,255,255,.9);text-decoration:none;font-size:.88rem}
 
-.date-bar{background:#fff;display:flex;align-items:center;justify-content:center;padding:9px 14px;border-bottom:1px solid #e0e0e0}
-.date-lbl{font-size:.88rem;font-weight:700;color:#333}
+.date-bar{background:#fff;display:flex;align-items:center;justify-content:center;padding:9px 14px;border-bottom:1px solid #cde0f5}
+.date-lbl{font-size:.88rem;font-weight:700;color:#2d6ea8}
 
-.tabs{background:#fff;display:flex;padding:0 12px;border-bottom:2px solid #e5e5e5}
+.tabs{background:#fff;display:flex;padding:0 12px;border-bottom:2px solid #cde0f5}
 .tab{padding:9px 14px;font-size:.8rem;font-weight:700;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;cursor:pointer;user-select:none}
-.tab.on{color:#1a5c2a;border-bottom-color:#1a5c2a}
+.tab.on{color:#2d6ea8;border-bottom-color:#FFD700}
 .tab .cnt{background:#c00;color:#fff;border-radius:20px;padding:0 5px;font-size:.65rem;margin-left:3px;vertical-align:middle}
 .tabs-spacer{flex:1}
 
@@ -185,7 +185,7 @@ main{padding:10px 0 50px}
 
 /* Bloque de competencia */
 .bloque{background:#fff;margin:10px 10px;border-radius:9px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.11)}
-.bloque-hdr{background:#1a5c2a;color:#fff;padding:9px 14px;font-size:.82rem;font-weight:700;display:flex;align-items:center;gap:7px}
+.bloque-hdr{background:#4a8fc7;color:#fff;padding:9px 14px;font-size:.82rem;font-weight:700;display:flex;align-items:center;gap:7px;border-left:4px solid #FFD700}
 
 /* Fila de partido */
 .partido{border-bottom:1px solid #f0f0f0}
@@ -207,8 +207,8 @@ main{padding:10px 0 50px}
 
 /* Marcador */
 .marcador{width:60px;flex-shrink:0;text-align:center}
-.score{font-size:1rem;font-weight:800;color:#111;letter-spacing:1px;white-space:nowrap}
-.hora{font-size:.95rem;font-weight:700;color:#1a5c2a}
+.score{font-size:1rem;font-weight:800;color:#2d6ea8;letter-spacing:1px;white-space:nowrap}
+.hora{font-size:.95rem;font-weight:700;color:#2d6ea8}
 .guion{color:#bbb;font-weight:400}
 
 /* Goleadores */
@@ -224,14 +224,14 @@ main{padding:10px 0 50px}
 /* Config */
 .cfg-wrap{padding:10px 10px 0}
 .cfg-card{background:#fff;border-radius:9px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,.1);margin-bottom:12px}
-.cfg-card h3{font-size:.88rem;color:#1a5c2a;font-weight:800;margin-bottom:14px;padding-bottom:9px;border-bottom:1px solid #eee;text-transform:uppercase;letter-spacing:.5px}
+.cfg-card h3{font-size:.88rem;color:#2d6ea8;font-weight:800;margin-bottom:14px;padding-bottom:9px;border-bottom:2px solid #FFD700;text-transform:uppercase;letter-spacing:.5px}
 .field{margin-bottom:12px}
 .field label{display:block;font-size:.73rem;font-weight:700;color:#555;margin-bottom:4px}
-.field input{width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:.87rem;outline:none}
-.field input:focus{border-color:#1a5c2a}
+.field input{width:100%;padding:8px 10px;border:1px solid #cde0f5;border-radius:6px;font-size:.87rem;outline:none}
+.field input:focus{border-color:#4a8fc7}
 .hint{font-size:.67rem;color:#999;margin-top:3px}
-.btn{background:#1a5c2a;color:#fff;border:none;padding:11px;border-radius:7px;font-size:.87rem;font-weight:700;cursor:pointer;width:100%}
-.btn:hover{background:#145222}
+.btn{background:#4a8fc7;color:#fff;border:none;padding:11px;border-radius:7px;font-size:.87rem;font-weight:700;cursor:pointer;width:100%}
+.btn:hover{background:#2d6ea8}
 .toast{background:#d4edda;color:#155724;border-radius:7px;padding:10px 14px;font-size:.82rem;margin-bottom:12px;border:1px solid #c3e6cb}
 .bdg{display:inline-block;padding:2px 9px;border-radius:20px;font-size:.7rem;font-weight:700}
 .bdg.on{background:#d4edda;color:#155724}
@@ -239,7 +239,7 @@ main{padding:10px 0 50px}
 .bdg.unk{background:#fff3cd;color:#856404}
 code{background:#f5f5f5;padding:2px 6px;border-radius:4px;font-size:.72rem}
 
-footer{text-align:center;font-size:.67rem;color:#aaa;padding:16px}
+footer{text-align:center;font-size:.67rem;color:#7aaed4;padding:16px;background:#fff;border-top:1px solid #cde0f5}
 
 @media(max-width:380px){
   .tnombre{font-size:.75rem}

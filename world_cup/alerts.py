@@ -343,10 +343,6 @@ def run():
     config = load_config()
     api_key = config.get("api_key", "")
     token = config["telegram"]["bot_token"]
-    chat_id = config["telegram"]["chat_id"]
-    followed_teams = config.get("followed_teams", [])
-    interval_live = config.get("poll_interval_seconds", 30)
-    interval_idle = config.get("poll_interval_idle_seconds", 300)
 
     if not api_key or api_key.startswith("TU_"):
         log.error("Falta configurar api_key en config.json. Ejecuta primero: python setup.py")
@@ -356,12 +352,21 @@ def run():
         sys.exit(1)
 
     log.info("🚀 Alertas Copa del Mundo 2026 iniciadas")
-    log.info("👁️  Siguiendo: %s", ", ".join(followed_teams) if followed_teams else "TODOS los equipos")
-    log.info("⏱️  Intervalo en vivo: %ds | Sin partidos: %ds", interval_live, interval_idle)
-
     state = load_state()
 
     while True:
+        # Recargar config en cada ciclo para reflejar cambios hechos desde la web
+        try:
+            config = load_config()
+        except Exception:
+            pass
+
+        api_key = config.get("api_key", "")
+        token = config["telegram"]["bot_token"]
+        chat_id = config["telegram"]["chat_id"]
+        followed_teams = config.get("followed_teams", [])
+        interval_live = config.get("poll_interval_seconds", 30)
+        interval_idle = config.get("poll_interval_idle_seconds", 300)
         try:
             matches = get_live_matches(api_key)
             followed = [m for m in matches if is_followed(m, followed_teams)]

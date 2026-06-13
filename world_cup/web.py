@@ -210,6 +210,19 @@ main{max-width:700px;margin:18px auto;padding:0 12px 40px}
 .badge.unknown{background:#fff3cd;color:#856404}
 
 footer{text-align:center;font-size:.68rem;color:#aaa;padding:20px}
+
+@media(max-width:480px){
+  header h1{font-size:.92rem}
+  nav a{padding:9px 10px;font-size:.78rem}
+  main{padding:0 8px 40px}
+  .card-body{padding:11px 12px}
+  .team{font-size:.82rem}
+  .score{font-size:1.2rem;letter-spacing:2px}
+  .score-box{min-width:64px}
+  .status-lbl{font-size:.6rem}
+  .sc-col{font-size:.65rem}
+  .cfg-card{padding:15px}
+}
 </style>
 </head>
 <body>

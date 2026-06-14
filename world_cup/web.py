@@ -192,8 +192,11 @@ header{background:#4a8fc7;padding:12px 14px;display:flex;align-items:center;just
 #upd{font-size:.67rem;color:rgba(255,255,255,.7)}
 .cfg-link{color:rgba(255,255,255,.9);text-decoration:none;font-size:.88rem}
 
-.date-bar{background:#fff;display:flex;align-items:center;justify-content:center;padding:9px 14px;border-bottom:1px solid #cde0f5}
-.date-lbl{font-size:.88rem;font-weight:700;color:#2d6ea8}
+.date-bar{background:#4a8fc7;display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:2px solid #FFD700}
+.date-lbl{font-size:.9rem;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.5px;text-align:center;flex:1}
+.date-nav{background:rgba(255,255,255,.15);color:#fff;border:none;width:36px;height:36px;border-radius:8px;font-size:1.4rem;font-weight:700;cursor:pointer;line-height:1;flex-shrink:0;transition:background .15s}
+.date-nav:hover{background:rgba(255,255,255,.3)}
+.date-nav:disabled{opacity:.3;cursor:default}
 
 .tabs{background:#fff;display:flex;padding:0 12px;border-bottom:2px solid #cde0f5}
 .tab{padding:9px 14px;font-size:.8rem;font-weight:700;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;cursor:pointer;user-select:none}
@@ -261,9 +264,6 @@ code{background:#f5f5f5;padding:2px 6px;border-radius:4px;font-size:.72rem}
 
 footer{text-align:center;font-size:.67rem;color:#7aaed4;padding:16px;background:#fff;border-top:1px solid #cde0f5}
 
-/* Twemoji: fuerza tamaño uniforme de banderas */
-img.emoji{height:1.1em;width:1.1em;vertical-align:-.1em}
-
 @media(max-width:380px){
   .tnombre{font-size:.75rem}
   .st{width:40px;font-size:.65rem}
@@ -290,7 +290,9 @@ img.emoji{height:1.1em;width:1.1em;vertical-align:-.1em}
 
 {% if page == 'home' %}
 <div class="date-bar">
+  <button class="date-nav" id="nav-prev" onclick="cambiarDia(-1)">‹</button>
   <span class="date-lbl" id="date-lbl">HOY</span>
+  <button class="date-nav" id="nav-next" onclick="cambiarDia(1)">›</button>
 </div>
 <div class="tabs">
   <div class="tab on" id="tab-todos" onclick="setTab('todos',this)">TODOS</div>
@@ -352,6 +354,7 @@ img.emoji{height:1.1em;width:1.1em;vertical-align:-.1em}
 var LIVE_ST = ['IN_PLAY','PAUSED','EXTRA_TIME','PENALTY_SHOOTOUT'];
 var mode = 'todos';
 var lastData = [];
+var selectedDate = null;  // 'YYYY-MM-DD' del día que se está viendo
 
 var ST = {
   IN_PLAY: 'EN<br>VIVO', PAUSED: 'ENTRE<br>TIEMPO', EXTRA_TIME: 'PRÓRR.',
@@ -414,58 +417,85 @@ function renderPartido(m) {
     + '</div>';
 }
 
+function todayISO() {
+  // Fecha de hoy en horario argentino (UTC-3)
+  var n = new Date();
+  var arg = new Date(n.getTime() + (n.getTimezoneOffset()*60000) - (3*3600000));
+  return arg.getFullYear()+'-'+String(arg.getMonth()+1).padStart(2,'0')+'-'+String(arg.getDate()).padStart(2,'0');
+}
+
+function addDays(iso, n) {
+  var p = iso.split('-');
+  var d = new Date(p[0], p[1]-1, p[2]);
+  d.setDate(d.getDate()+n);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
 function dateLabel(iso) {
-  // iso = 'YYYY-MM-DD' en horario argentino
-  var parts = iso.split('-');
-  var d = new Date(parts[0], parts[1]-1, parts[2]);
-  var hoy = new Date();
-  hoy.setHours(0,0,0,0);
-  var diff = Math.round((d - hoy) / 86400000);
-  var dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  var p = iso.split('-');
+  var d = new Date(p[0], p[1]-1, p[2]);
+  var diff = Math.round((d - new Date(todayISO().split('-')[0], todayISO().split('-')[1]-1, todayISO().split('-')[2])) / 86400000);
+  var dias = ['DOMINGO','LUNES','MARTES','MIÉRCOLES','JUEVES','VIERNES','SÁBADO'];
   var meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
   var fecha = d.getDate()+' '+meses[d.getMonth()];
   var pre;
-  if (diff === 0) pre = 'HOY';
+  if (diff === 0) pre = 'PARTIDOS DE HOY';
   else if (diff === -1) pre = 'AYER';
   else if (diff === 1) pre = 'MAÑANA';
-  else pre = dias[d.getDay()].toUpperCase();
-  return pre + ' · ' + fecha;
+  else pre = dias[d.getDay()];
+  return (diff===0) ? pre : pre + ' · ' + fecha;
+}
+
+function dateBounds() {
+  // Rango navegable: -2 / +4 días desde hoy (igual al fetch del backend)
+  return { min: addDays(todayISO(), -2), max: addDays(todayISO(), 4) };
+}
+
+function cambiarDia(delta) {
+  var b = dateBounds();
+  var nuevo = addDays(selectedDate, delta);
+  if (nuevo < b.min || nuevo > b.max) return;
+  selectedDate = nuevo;
+  renderContent(lastData);
 }
 
 function renderContent(matches) {
   var live = matches.filter(function(m){ return LIVE_ST.includes(m.status); });
-  var vis  = mode === 'live' ? live : matches;
 
-  // Actualizar badge de la pestaña VIVO
+  // Badge de la pestaña VIVO
   var tl = document.getElementById('tab-live');
   if (tl) tl.innerHTML = live.length
     ? 'VIVO <span class="cnt">'+live.length+'</span>'
     : 'VIVO';
 
+  // Etiqueta de fecha + estado de las flechas
+  var b = dateBounds();
+  var dl = document.getElementById('date-lbl');
+  if (dl) dl.textContent = (mode === 'live') ? 'EN VIVO' : dateLabel(selectedDate);
+  var np = document.getElementById('nav-prev'), nn = document.getElementById('nav-next');
+  var navOff = (mode === 'live');
+  if (np) np.disabled = navOff || (selectedDate <= b.min);
+  if (nn) nn.disabled = navOff || (selectedDate >= b.max);
+
+  // Partidos a mostrar: en modo live todos los en curso, si no los del día elegido
+  var vis = (mode === 'live')
+    ? live
+    : matches.filter(function(m){ return m.date === selectedDate; });
+
   var c = document.getElementById('content');
   if (!c) return;
 
   if (!vis.length) {
-    c.innerHTML = '<div class="empty-msg">'+(mode==='live'?'No hay partidos en vivo ahora.':'No hay partidos en este rango de fechas.')+'</div>';
+    c.innerHTML = '<div class="empty-msg">'
+      + (mode==='live' ? 'No hay partidos en vivo ahora.' : 'No hay partidos este día.')
+      + '</div>';
     return;
   }
 
-  // Agrupar por fecha (manteniendo orden cronológico)
-  var grupos = {};
-  var orden = [];
-  vis.forEach(function(m){
-    var k = m.date || 'sin-fecha';
-    if (!grupos[k]) { grupos[k] = []; orden.push(k); }
-    grupos[k].push(m);
-  });
-  orden.sort();
-
-  c.innerHTML = orden.map(function(fecha){
-    return '<div class="bloque">'
-      + '<div class="bloque-hdr">🏆 ' + dateLabel(fecha) + '</div>'
-      + grupos[fecha].map(renderPartido).join('')
-      + '</div>';
-  }).join('');
+  c.innerHTML = '<div class="bloque">'
+    + '<div class="bloque-hdr">🏆 COPA DEL MUNDO 2026</div>'
+    + vis.map(renderPartido).join('')
+    + '</div>';
 }
 
 function refresh() {
@@ -473,15 +503,11 @@ function refresh() {
     .then(function(r){ return r.json(); })
     .then(function(data){
       lastData = data.matches;
+      if (!selectedDate) selectedDate = todayISO();
       renderContent(lastData);
       var t = new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
       var u = document.getElementById('upd');
       if (u) u.textContent = t;
-      var dl = document.getElementById('date-lbl');
-      if (dl) {
-        var d = new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
-        dl.textContent = d.charAt(0).toUpperCase()+d.slice(1);
-      }
       var live = lastData.filter(function(m){ return LIVE_ST.includes(m.status); });
       document.title = (live.length ? '('+live.length+') ' : '') + 'Mundial 2026';
     })
@@ -492,15 +518,6 @@ function refresh() {
 refresh();
 setInterval(refresh, 30000);
 {% endif %}
-</script>
-
-<!-- Twemoji: renderiza banderas como imágenes (necesario en Windows/Chrome) -->
-<script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous"></script>
-<script>
-  function applyTwemoji() {
-    var c = document.getElementById('content');
-    if (c) twemoji.parse(c, {folder:'svg', ext:'.svg'});
-  }
 </script>
 </body>
 </html>"""

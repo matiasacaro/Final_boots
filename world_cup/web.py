@@ -637,7 +637,19 @@ def test_telegram():
         if r.ok:
             return jsonify({"ok": True})
         data = r.json()
-        return jsonify({"ok": False, "error": data.get("description", r.text[:200])})
+        desc = data.get("description", r.text[:200])
+        # Traducir los errores más comunes de Telegram a algo accionable
+        if r.status_code == 404 or "not found" in desc.lower():
+            hint = ("El bot_token es inválido. Verificá que copiaste el token "
+                    "completo de @BotFather en config.json (formato 123456789:AAExxxx...).")
+        elif "chat not found" in desc.lower():
+            hint = ("El chat_id es incorrecto, o todavía no le escribiste /start a tu bot "
+                    "en Telegram. Mandale un mensaje al bot y volvé a probar.")
+        elif "bot was blocked" in desc.lower():
+            hint = "Bloqueaste al bot en Telegram. Desbloquealo y volvé a probar."
+        else:
+            hint = desc
+        return jsonify({"ok": False, "error": hint})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
 

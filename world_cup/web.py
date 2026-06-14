@@ -340,6 +340,10 @@ footer{text-align:center;font-size:.67rem;color:#7aaed4;padding:16px;background:
         Esperando el primer latido del bot. Si tarda, verificá que el contenedor <code>alertas</code> esté corriendo.
       {% endif %}
     </div>
+    <button type="button" class="btn btn-test" onclick="probarTelegram(this)" style="margin-top:14px">
+      📲 Enviar mensaje de prueba a Telegram
+    </button>
+    <div id="test-result" style="font-size:.8rem;margin-top:9px"></div>
   </div>
 
   <div class="cfg-card">
@@ -531,6 +535,29 @@ function refresh() {
     .catch(function(e){ console.error(e); });
 }
 
+function probarTelegram(btn) {
+  var res = document.getElementById('test-result');
+  btn.disabled = true;
+  res.textContent = 'Enviando...';
+  res.style.color = '#888';
+  fetch('/test-telegram', {method:'POST'})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.ok) {
+        res.textContent = '✅ ¡Enviado! Revisá tu Telegram.';
+        res.style.color = '#155724';
+      } else {
+        res.textContent = '❌ ' + (d.error || 'Error desconocido');
+        res.style.color = '#721c24';
+      }
+    })
+    .catch(function(e){
+      res.textContent = '❌ No se pudo conectar: ' + e;
+      res.style.color = '#721c24';
+    })
+    .finally(function(){ btn.disabled = false; });
+}
+
 {% if page == 'home' %}
 refresh();
 setInterval(refresh, 30000);
@@ -582,6 +609,37 @@ def api_debug():
     except Exception as e:
         out["error"] = str(e)
     return jsonify(out)
+
+
+@app.route("/test-telegram", methods=["POST"])
+def test_telegram():
+    """Envía un mensaje de prueba al chat de Telegram configurado."""
+    config = load_config()
+    tg = config.get("telegram", {})
+    token = tg.get("bot_token", "")
+    chat_id = tg.get("chat_id", "")
+    if not token or token.startswith("123456") or not chat_id:
+        return jsonify({"ok": False, "error": "Telegram no está configurado (bot_token / chat_id)."})
+    try:
+        r = requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={
+                "chat_id": str(chat_id),
+                "text": (
+                    "✅ <b>Mensaje de prueba</b>\n"
+                    "🏆 Copa del Mundo 2026\n"
+                    "El bot de alertas está conectado correctamente."
+                ),
+                "parse_mode": "HTML",
+            },
+            timeout=10,
+        )
+        if r.ok:
+            return jsonify({"ok": True})
+        data = r.json()
+        return jsonify({"ok": False, "error": data.get("description", r.text[:200])})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
 
 
 @app.route("/config", methods=["GET", "POST"])

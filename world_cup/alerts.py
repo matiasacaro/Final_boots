@@ -183,6 +183,28 @@ def process_match(match, state, token, chat_id):
         log.info("→ %s", text.replace("\n", " | ")[:100])
         tg_send(token, chat_id, text)
 
+    # ── Primera vez que vemos un partido YA en curso (o terminado) ───────────
+    # Inicializamos el estado en silencio para no spamear con goles/eventos
+    # que ocurrieron antes de empezar a seguirlo (ej. al activar "todos").
+    if not prev and status in LIVE_STATUSES | ENDED_STATUSES:
+        for idx, goal in enumerate(goals):
+            seen_goals.add(goal_key(idx, goal))
+        for idx, booking in enumerate(bookings):
+            seen_bookings.add(booking_key(idx, booking))
+        state[fid] = {
+            "status": status,
+            "duration": duration,
+            "paused_count": 1 if status == PAUSED else 0,
+            "home": home,
+            "away": away,
+            "hg": hg,
+            "ag": ag,
+            "seen_goals": list(seen_goals),
+            "seen_bookings": list(seen_bookings),
+        }
+        log.info("Partido ya en curso al iniciar seguimiento, estado inicializado: %s vs %s", home, away)
+        return
+
     # ── Inicio del partido ─────────────────────────────────────────────────
     if status == IN_PLAY and prev_status in NOT_STARTED | {""}:
         notify(

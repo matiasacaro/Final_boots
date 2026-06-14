@@ -347,6 +347,32 @@ footer{text-align:center;font-size:.67rem;color:#7aaed4;padding:16px;background:
   </div>
 
   <div class="cfg-card">
+    <h3>🔌 Conexión (Telegram y API)</h3>
+    <form method="POST" action="/config">
+      <div class="field">
+        <label>Token del bot de Telegram</label>
+        <input type="text" name="bot_token" value="{{ config.get('telegram',{}).get('bot_token','') }}" placeholder="123456789:AAE...">
+        <p class="hint">Lo obtenés de @BotFather en Telegram.</p>
+      </div>
+      <div class="field">
+        <label>Chat ID de Telegram</label>
+        <input type="text" name="chat_id" id="chat_id" value="{{ config.get('telegram',{}).get('chat_id','') }}" placeholder="987654321">
+        <p class="hint">
+          Mandale un mensaje a tu bot y tocá detectar.
+          <a href="#" onclick="detectarChatId(event)" style="color:#2d6ea8;font-weight:700">Detectar chat_id</a>
+          <span id="detect-result"></span>
+        </p>
+      </div>
+      <div class="field">
+        <label>API Key (football-data.org)</label>
+        <input type="text" name="api_key" value="{{ config.get('api_key','') }}" placeholder="tu_api_key">
+        <p class="hint">Registro gratis en football-data.org.</p>
+      </div>
+      <button type="submit" class="btn">Guardar conexión</button>
+    </form>
+  </div>
+
+  <div class="cfg-card">
     <h3>⚙️ Configuración de Alertas</h3>
     <form method="POST" action="/config">
       <div class="field">
@@ -535,6 +561,26 @@ function refresh() {
     .catch(function(e){ console.error(e); });
 }
 
+function detectarChatId(ev) {
+  ev.preventDefault();
+  var res = document.getElementById('detect-result');
+  res.textContent = ' Buscando...';
+  res.style.color = '#888';
+  fetch('/api/detect-chatid')
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.ok) {
+        document.getElementById('chat_id').value = d.chat_id;
+        res.textContent = ' ✅ ' + d.chat_id + (d.name ? ' ('+d.name+')' : '') + ' — acordate de Guardar';
+        res.style.color = '#155724';
+      } else {
+        res.textContent = ' ❌ ' + d.error;
+        res.style.color = '#721c24';
+      }
+    })
+    .catch(function(e){ res.textContent = ' ❌ ' + e; res.style.color = '#721c24'; });
+}
+
 function probarTelegram(btn) {
   var res = document.getElementById('test-result');
   btn.disabled = true;
@@ -654,15 +700,56 @@ def test_telegram():
         return jsonify({"ok": False, "error": str(e)})
 
 
+@app.route("/api/detect-chatid")
+def detect_chatid():
+    """Detecta el chat_id leyendo los mensajes recientes del bot (getUpdates)."""
+    config = load_config()
+    token = config.get("telegram", {}).get("bot_token", "")
+    if not token or token.startswith("123456"):
+        return jsonify({"ok": False, "error": "Primero guardá un bot_token válido."})
+    try:
+        r = requests.get(f"https://api.telegram.org/bot{token}/getUpdates", timeout=10)
+        data = r.json()
+        if not data.get("ok"):
+            return jsonify({"ok": False, "error": data.get("description", "Token inválido.")})
+        # Buscar el chat_id más reciente
+        chat_id, chat_name = None, None
+        for upd in reversed(data.get("result", [])):
+            msg = upd.get("message") or upd.get("channel_post") or {}
+            chat = msg.get("chat")
+            if chat:
+                chat_id = chat.get("id")
+                chat_name = chat.get("first_name") or chat.get("title") or ""
+                break
+        if chat_id is None:
+            return jsonify({"ok": False, "error": "No encontré mensajes. Mandale un mensaje a tu bot y reintentá."})
+        return jsonify({"ok": True, "chat_id": str(chat_id), "name": chat_name})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+
 @app.route("/config", methods=["GET", "POST"])
 def config_page():
     saved = False
     config = load_config()
     if request.method == "POST":
-        raw = request.form.get("followed_teams", "")
-        config["followed_teams"] = [t.strip() for t in raw.split(",") if t.strip()]
-        config["poll_interval_seconds"] = max(30, int(request.form.get("poll_live", 30)))
-        config["poll_interval_idle_seconds"] = max(60, int(request.form.get("poll_idle", 300)))
+        # Hay dos formularios (Conexión y Alertas): actualizamos solo
+        # los campos que vengan en este POST para no pisar los demás.
+        f = request.form
+        if "bot_token" in f or "chat_id" in f or "api_key" in f:
+            tg = config.setdefault("telegram", {})
+            if "bot_token" in f:
+                tg["bot_token"] = f.get("bot_token", "").strip()
+            if "chat_id" in f:
+                tg["chat_id"] = f.get("chat_id", "").strip()
+            if "api_key" in f:
+                config["api_key"] = f.get("api_key", "").strip()
+        if "followed_teams" in f:
+            config["followed_teams"] = [t.strip() for t in f.get("followed_teams", "").split(",") if t.strip()]
+        if "poll_live" in f:
+            config["poll_interval_seconds"] = max(30, int(f.get("poll_live", 30)))
+        if "poll_idle" in f:
+            config["poll_interval_idle_seconds"] = max(60, int(f.get("poll_idle", 300)))
         save_config(config)
         saved = True
     return render_template_string(

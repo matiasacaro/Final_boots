@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+world_cup/config.json
+world_cup/.state.json
+world_cup/.heartbeat

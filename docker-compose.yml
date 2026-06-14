@@ -1,0 +1,17 @@
+services:
+
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./world_cup:/app
+    restart: unless-stopped
+
+  alertas:
+    build: .
+    volumes:
+      - ./world_cup:/app
+    command: python alerts.py
+    restart: unless-stopped
+

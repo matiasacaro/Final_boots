@@ -1,0 +1,18 @@
+{
+  "_instrucciones": {
+    "api_key": "Registrate gratis en https://www.football-data.org y copia tu API key",
+    "bot_token": "Habla con @BotFather en Telegram > /newbot > copia el token",
+    "chat_id": "Ejecuta 'python setup.py' y te ayudamos a obtenerlo automaticamente",
+    "followed_teams": "Lista de equipos a seguir. Vacio [] = TODOS los partidos",
+    "poll_interval_seconds": "Cada cuantos segundos revisar durante un partido en vivo (minimo 30)",
+    "poll_interval_idle_seconds": "Cada cuantos segundos revisar cuando no hay partido en vivo"
+  },
+  "api_key": "TU_API_KEY_DE_FOOTBALL_DATA_ORG",
+  "telegram": {
+    "bot_token": "123456789:ABCdefGHIjklMNOpqrSTUvwxYZ",
+    "chat_id": "987654321"
+  },
+  "followed_teams": ["Argentina", "Brasil", "Francia"],
+  "poll_interval_seconds": 30,
+  "poll_interval_idle_seconds": 300
+}

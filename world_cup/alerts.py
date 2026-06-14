@@ -22,6 +22,7 @@ log = logging.getLogger(__name__)
 BASE = Path(__file__).parent
 CONFIG_FILE = BASE / "config.json"
 STATE_FILE = BASE / ".state.json"
+HEARTBEAT_FILE = BASE / ".heartbeat"
 
 FOOTBALL_API = "https://api.football-data.org/v4"
 COMPETITION = "WC"
@@ -355,6 +356,12 @@ def run():
     state = load_state()
 
     while True:
+        # Latido: la web usa este archivo para saber que el bot está vivo
+        try:
+            HEARTBEAT_FILE.write_text(str(int(time.time())))
+        except Exception:
+            pass
+
         # Recargar config en cada ciclo para reflejar cambios hechos desde la web
         try:
             config = load_config()

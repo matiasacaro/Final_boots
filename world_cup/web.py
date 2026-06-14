@@ -19,6 +19,7 @@ log = logging.getLogger(__name__)
 
 BASE = Path(__file__).parent
 CONFIG_FILE = BASE / "config.json"
+HEARTBEAT_FILE = BASE / ".heartbeat"
 FOOTBALL_API = "https://api.football-data.org/v4"
 COMPETITION = "WC"
 TZ_ARG = timezone(timedelta(hours=-3))
@@ -61,14 +62,29 @@ def save_config(config):
 
 
 def bot_is_running():
+    # Método 1 (Docker): el bot escribe un heartbeat en cada ciclo.
+    # Lo consideramos vivo si el latido es más reciente que el intervalo idle + margen.
+    try:
+        if HEARTBEAT_FILE.exists():
+            last = int(HEARTBEAT_FILE.read_text().strip())
+            config = load_config()
+            idle = config.get("poll_interval_idle_seconds", 300)
+            return (time.time() - last) < (idle + 120)
+    except Exception:
+        pass
+
+    # Método 2 (Raspberry/systemd): consultar el servicio.
     try:
         r = subprocess.run(
             ["systemctl", "is-active", "wc2026"],
             capture_output=True, text=True, timeout=3,
         )
-        return r.stdout.strip() == "active"
+        if r.stdout.strip() in ("active", "inactive", "failed"):
+            return r.stdout.strip() == "active"
     except Exception:
-        return None
+        pass
+
+    return None
 
 
 def fetch_matches():
@@ -318,9 +334,10 @@ footer{text-align:center;font-size:.67rem;color:#7aaed4;padding:16px;background:
         <span class="bdg on">● ACTIVO</span> Enviando alertas a Telegram.
       {% elif bot_status == False %}
         <span class="bdg off">● INACTIVO</span>
-        Inicialo con: <code>sudo systemctl start wc2026</code>
+        No hay latido reciente. Revisá los logs: <code>docker compose logs alertas</code>
       {% else %}
         <span class="bdg unk">● DESCONOCIDO</span>
+        Esperando el primer latido del bot. Si tarda, verificá que el contenedor <code>alertas</code> esté corriendo.
       {% endif %}
     </div>
   </div>

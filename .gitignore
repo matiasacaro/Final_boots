@@ -1,7 +1,5 @@
-.git
-__pycache__
+__pycache__/
 *.pyc
+world_cup/config.json
 world_cup/.state.json
 world_cup/.heartbeat
-world_cup/config.json
-Fotos/

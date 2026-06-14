@@ -78,11 +78,13 @@ def fetch_matches():
     try:
         config = load_config()
         headers = {"X-Auth-Token": config.get("api_key", "")}
-        today = datetime.now(TZ_ARG).strftime("%Y-%m-%d")
+        now_arg = datetime.now(TZ_ARG)
+        date_from = (now_arg - timedelta(days=2)).strftime("%Y-%m-%d")
+        date_to = (now_arg + timedelta(days=4)).strftime("%Y-%m-%d")
         r = requests.get(
             f"{FOOTBALL_API}/competitions/{COMPETITION}/matches",
             headers=headers,
-            params={"dateFrom": today, "dateTo": today},
+            params={"dateFrom": date_from, "dateTo": date_to},
             timeout=10,
         )
         if r.ok:
@@ -124,6 +126,15 @@ def fmt_kickoff(utc_str):
         return "?"
 
 
+def match_date(utc_str):
+    """Fecha del partido en horario argentino, formato YYYY-MM-DD."""
+    try:
+        dt = datetime.fromisoformat(utc_str.replace("Z", "+00:00"))
+        return dt.astimezone(TZ_ARG).strftime("%Y-%m-%d")
+    except Exception:
+        return ""
+
+
 def match_to_dict(m):
     hg, ag = compute_score(m)
     home_id = m["homeTeam"]["id"]
@@ -156,6 +167,7 @@ def match_to_dict(m):
         "scorers_home": scorers_home,
         "scorers_away": scorers_away,
         "group": m.get("group") or "",
+        "date": match_date(m["utcDate"]),
     }
 
 
@@ -399,6 +411,24 @@ function renderPartido(m) {
     + '</div>';
 }
 
+function dateLabel(iso) {
+  // iso = 'YYYY-MM-DD' en horario argentino
+  var parts = iso.split('-');
+  var d = new Date(parts[0], parts[1]-1, parts[2]);
+  var hoy = new Date();
+  hoy.setHours(0,0,0,0);
+  var diff = Math.round((d - hoy) / 86400000);
+  var dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  var meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  var fecha = d.getDate()+' '+meses[d.getMonth()];
+  var pre;
+  if (diff === 0) pre = 'HOY';
+  else if (diff === -1) pre = 'AYER';
+  else if (diff === 1) pre = 'MAÑANA';
+  else pre = dias[d.getDay()].toUpperCase();
+  return pre + ' · ' + fecha;
+}
+
 function renderContent(matches) {
   var live = matches.filter(function(m){ return LIVE_ST.includes(m.status); });
   var vis  = mode === 'live' ? live : matches;
@@ -413,14 +443,26 @@ function renderContent(matches) {
   if (!c) return;
 
   if (!vis.length) {
-    c.innerHTML = '<div class="empty-msg">'+(mode==='live'?'No hay partidos en vivo ahora.':'No hay partidos programados para hoy.')+'</div>';
+    c.innerHTML = '<div class="empty-msg">'+(mode==='live'?'No hay partidos en vivo ahora.':'No hay partidos en este rango de fechas.')+'</div>';
     return;
   }
 
-  c.innerHTML = '<div class="bloque">'
-    + '<div class="bloque-hdr">🏆 COPA DEL MUNDO 2026</div>'
-    + vis.map(renderPartido).join('')
-    + '</div>';
+  // Agrupar por fecha (manteniendo orden cronológico)
+  var grupos = {};
+  var orden = [];
+  vis.forEach(function(m){
+    var k = m.date || 'sin-fecha';
+    if (!grupos[k]) { grupos[k] = []; orden.push(k); }
+    grupos[k].push(m);
+  });
+  orden.sort();
+
+  c.innerHTML = orden.map(function(fecha){
+    return '<div class="bloque">'
+      + '<div class="bloque-hdr">🏆 ' + dateLabel(fecha) + '</div>'
+      + grupos[fecha].map(renderPartido).join('')
+      + '</div>';
+  }).join('');
 }
 
 function refresh() {
@@ -438,6 +480,8 @@ function refresh() {
         var d = new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
         dl.textContent = d.charAt(0).toUpperCase()+d.slice(1);
       }
+      var live = lastData.filter(function(m){ return LIVE_ST.includes(m.status); });
+      document.title = (live.length ? '('+live.length+') ' : '') + 'Mundial 2026';
     })
     .catch(function(e){ console.error(e); });
 }

@@ -96,6 +96,12 @@ def fetch_matches():
 
 
 def compute_score(match):
+    # Para partidos terminados, score.fullTime es la fuente más confiable.
+    # Para partidos en vivo, fullTime es null → contamos desde el array goals.
+    ft = (match.get("score") or {}).get("fullTime") or {}
+    if ft.get("home") is not None and ft.get("away") is not None:
+        return ft["home"], ft["away"]
+
     home_id = match["homeTeam"]["id"]
     hg, ag = 0, 0
     for g in (match.get("goals") or []):
@@ -240,6 +246,9 @@ main{padding:10px 0 50px}
 code{background:#f5f5f5;padding:2px 6px;border-radius:4px;font-size:.72rem}
 
 footer{text-align:center;font-size:.67rem;color:#7aaed4;padding:16px;background:#fff;border-top:1px solid #cde0f5}
+
+/* Twemoji: fuerza tamaño uniforme de banderas */
+img.emoji{height:1.1em;width:1.1em;vertical-align:-.1em}
 
 @media(max-width:380px){
   .tnombre{font-size:.75rem}
@@ -420,6 +429,7 @@ function refresh() {
     .then(function(data){
       lastData = data.matches;
       renderContent(lastData);
+      if (typeof twemoji !== 'undefined') applyTwemoji();
       var t = new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
       var u = document.getElementById('upd');
       if (u) u.textContent = t;
@@ -436,6 +446,15 @@ function refresh() {
 refresh();
 setInterval(refresh, 30000);
 {% endif %}
+</script>
+
+<!-- Twemoji: renderiza banderas como imágenes (necesario en Windows/Chrome) -->
+<script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous"></script>
+<script>
+  function applyTwemoji() {
+    var c = document.getElementById('content');
+    if (c) twemoji.parse(c, {folder:'svg', ext:'.svg'});
+  }
 </script>
 </body>
 </html>"""

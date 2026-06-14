@@ -473,6 +473,37 @@ def api_matches():
     return jsonify({"matches": [match_to_dict(m) for m in matches]})
 
 
+@app.route("/api/debug")
+def api_debug():
+    """Diagnóstico: devuelve la respuesta cruda de football-data.org."""
+    config = load_config()
+    api_key = config.get("api_key", "")
+    headers = {"X-Auth-Token": api_key}
+    today = datetime.now(TZ_ARG).strftime("%Y-%m-%d")
+    out = {
+        "api_key_configurada": bool(api_key and not api_key.startswith("TU_")),
+        "fecha_consultada": today,
+    }
+    try:
+        r = requests.get(
+            f"{FOOTBALL_API}/competitions/{COMPETITION}/matches",
+            headers=headers,
+            params={"dateFrom": today, "dateTo": today},
+            timeout=10,
+        )
+        out["http_status"] = r.status_code
+        data = r.json()
+        out["resultSet"] = data.get("resultSet")
+        out["competition"] = (data.get("competition") or {}).get("name")
+        # Primer partido completo, sin filtrar, para ver la estructura real
+        ms = data.get("matches", [])
+        out["cantidad_partidos"] = len(ms)
+        out["primer_partido_crudo"] = ms[0] if ms else None
+    except Exception as e:
+        out["error"] = str(e)
+    return jsonify(out)
+
+
 @app.route("/config", methods=["GET", "POST"])
 def config_page():
     saved = False

@@ -168,6 +168,8 @@ def match_to_dict(m):
         "scorers_away": scorers_away,
         "group": m.get("group") or "",
         "date": match_date(m["utcDate"]),
+        "home_crest": m["homeTeam"].get("crest", ""),
+        "away_crest": m["awayTeam"].get("crest", ""),
     }
 
 
@@ -218,10 +220,10 @@ main{padding:10px 0 50px}
 @keyframes p{0%,100%{opacity:1}50%{opacity:.2}}
 
 /* Equipos */
-.local{flex:1;display:flex;align-items:center;justify-content:flex-end;gap:5px;overflow:hidden}
-.visita{flex:1;display:flex;align-items:center;gap:5px;overflow:hidden}
+.local{flex:1;display:flex;align-items:center;justify-content:flex-end;gap:6px;overflow:hidden}
+.visita{flex:1;display:flex;align-items:center;gap:6px;overflow:hidden}
 .tnombre{font-size:.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bandera{font-size:.85rem;flex-shrink:0;line-height:1}
+.escudo{width:26px;height:26px;border-radius:50%;object-fit:contain;flex-shrink:0;background:#f0f4f8;border:1px solid #dde8f0;padding:2px}
 
 /* Marcador */
 .marcador{width:60px;flex-shrink:0;text-align:center}
@@ -387,14 +389,15 @@ function renderPartido(m) {
     marcador = '<span class="score">'+m.hg+'<span class="guion"> - </span>'+m.ag+'</span>';
   }
 
-  var hf = m.home_flag || '', af = m.away_flag || '';
+  var hCrest = m.home_crest ? '<img class="escudo" src="'+m.home_crest+'" onerror="this.style.display=\'none\'">' : '';
+  var aCrest = m.away_crest ? '<img class="escudo" src="'+m.away_crest+'" onerror="this.style.display=\'none\'">' : '';
 
-  // Goleadores
+  // Goleadores: formato "minuto' nombre"
   var gh = (m.scorers_home||[]).map(function(s){
-    return '⚽ '+s.name+' <span class="gol-min">'+s.minute+"'</span>";
+    return '<span class="gol-min">'+s.minute+"'</span> "+s.name;
   }).join('<br>');
   var ga = (m.scorers_away||[]).map(function(s){
-    return '⚽ '+s.name+' <span class="gol-min">'+s.minute+"'</span>";
+    return '<span class="gol-min">'+s.minute+"'</span> "+s.name;
   }).join('<br>');
   var golesHtml = (gh||ga)
     ? '<div class="goles"><div class="goles-gap"></div><div class="goles-l">'+gh+'</div><div class="goles-m"></div><div class="goles-r">'+ga+'</div></div>'
@@ -403,9 +406,9 @@ function renderPartido(m) {
   return '<div class="partido">'
     + '<div class="fila">'
     +   '<div class="st '+stCls+'">'+stTxt+'</div>'
-    +   '<div class="local"><span class="tnombre">'+m.home+'</span><span class="bandera">'+hf+'</span></div>'
+    +   '<div class="local"><span class="tnombre">'+m.home+'</span>'+hCrest+'</div>'
     +   '<div class="marcador">'+marcador+'</div>'
-    +   '<div class="visita"><span class="bandera">'+af+'</span><span class="tnombre">'+m.away+'</span></div>'
+    +   '<div class="visita">'+aCrest+'<span class="tnombre">'+m.away+'</span></div>'
     + '</div>'
     + golesHtml
     + '</div>';
@@ -471,7 +474,6 @@ function refresh() {
     .then(function(data){
       lastData = data.matches;
       renderContent(lastData);
-      if (typeof twemoji !== 'undefined') applyTwemoji();
       var t = new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
       var u = document.getElementById('upd');
       if (u) u.textContent = t;
